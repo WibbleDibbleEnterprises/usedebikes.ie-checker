@@ -2,8 +2,8 @@ name: usedebikes Checker
 
 on:
   schedule:
-    # Runs every 30 minutes
-    - cron: "0,30 * * * *"
+    # Triggers every 15 minutes — jitter step below randomises the exact run time
+    - cron: "0,15,30,45 * * * *"
   workflow_dispatch:
     # Also allows you to run it manually from GitHub with a button click
 
@@ -15,6 +15,12 @@ jobs:
       contents: write  # Needed so the bot can save seen_ids.json back to the repo
 
     steps:
+      - name: Random jitter delay
+        # Waits a random number of seconds (0–119) before doing anything.
+        # This means actual run times look like 14m13s or 16m58s apart rather
+        # than a perfectly regular 15 minutes.
+        run: sleep $((RANDOM % 120))
+
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
