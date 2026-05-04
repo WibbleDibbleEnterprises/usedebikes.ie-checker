@@ -1,11 +1,12 @@
 name: usedebikes Checker
 
 on:
-  schedule:
-    # Triggers every 15 minutes — jitter step below randomises the exact run time
-    - cron: "0,15,30,45 * * * *"
+  # Scheduled runs via GitHub's own cron are disabled because they are unreliable.
+  # This workflow is triggered externally every 15 minutes by cron-job.org instead.
+  # schedule:
+  #   - cron: "0,15,30,45 * * * *"
   workflow_dispatch:
-    # Also allows you to run it manually from GitHub with a button click
+    # Triggered by cron-job.org, and also allows manual runs from GitHub
 
 jobs:
   check-listings:
