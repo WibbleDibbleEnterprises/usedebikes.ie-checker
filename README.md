@@ -7,6 +7,7 @@ This guide will help you set up the bot from scratch and show you how to change 
 ## 📋 What you'll need
 
 - A free [GitHub](https://github.com) account
+- A free [cron-job.org](https://cron-job.org) account (this is what reliably triggers the bot every 15 minutes)
 - A phone with [Telegram](https://telegram.org) installed (it's a free messaging app)
 
 ---
@@ -52,7 +53,7 @@ This tells the bot which conversation to send messages to (yours).
 7. Upload all the files from this folder:
    - `checker.py`
    - `seen_ids.json`
-   - The file called `vinted_checker.yml` needs to go inside a specific folder in your repo. When uploading, GitHub lets you type a path into the filename box — name the file `.github/workflows/vinted_checker.yml` and GitHub will create the folders automatically
+   - The file called `usedebikes_checker.yml` needs to go inside a specific folder in your repo. When uploading, GitHub lets you type a path into the filename box — name the file `.github/workflows/usedebikes_checker.yml` and GitHub will create the folders automatically
 
 ---
 
@@ -77,12 +78,47 @@ Make sure the secret names are spelled exactly as shown above — they are case-
 
 1. In your repo, click the **Actions** tab at the top
 2. If GitHub shows a message asking you to enable Actions, click the green button to enable them
-3. That's it! The bot will now run automatically every 30 minutes and send you a Telegram message when it finds something new.
+
+---
+
+### Step 6 — Create a GitHub Personal Access Token
+
+This is what cron-job.org will use to trigger your workflow. It's like a special key that only has permission to run workflows — nothing else.
+
+1. Go to github.com and click your profile picture in the top-right corner, then click **Settings**
+2. Scroll all the way down the left menu and click **Developer settings**
+3. Click **Personal access tokens** > **Tokens (classic)**
+4. Click **Generate new token (classic)**
+5. Give it a name like `cron-job trigger`
+6. Set the expiry to whatever you like (No expiration means you never have to redo this)
+7. Tick the **workflow** checkbox
+8. Click **Generate token** and copy it — **you won't be able to see it again after leaving the page**
+
+---
+
+### Step 7 — Set up cron-job.org
+
+This is the service that reliably pings your bot every 15 minutes. GitHub's own built-in scheduler is unreliable and can skip hours at a time, so we use this instead.
+
+1. Go to [cron-job.org](https://cron-job.org) and create a free account
+2. Click **Create cronjob**
+3. Give it a title like `usedebikes checker`
+4. Set the URL to the following, replacing `YOUR_GITHUB_USERNAME` and `YOUR_REPO_NAME` with your own:
+   `https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions/workflows/usedebikes_checker.yml/dispatches`
+5. Set the schedule to **every 15 minutes**
+6. Expand the **Advanced** section and add the following under **Request headers**:
+   - Header: `Authorization` — Value: `Bearer YOUR_PERSONAL_ACCESS_TOKEN` (paste the token from Step 6)
+   - Header: `Accept` — Value: `application/vnd.github+json`
+7. Under **Request body**, set the type to **JSON** and paste in exactly: `{"ref":"main"}`
+8. Click **Save**
+
+The bot will now run every 15 minutes (plus a small random delay each time so it doesn't run like clockwork).
 
 **Want to test it right now?**
-1. Click **Actions** > click **Used eBikes Listing Checker** in the left list
-2. Click **Run workflow** > **Run workflow**
-3. After 30–60 seconds, click the run to see the output and confirm it worked. If everything is set up correctly, you should get a Telegram message for any matching listings that currently exist.
+1. Go to your GitHub repo and click the **Actions** tab
+2. Click **usedebikes Checker** in the left list
+3. Click **Run workflow** > **Run workflow**
+4. After 30–60 seconds, click the run to see the output and confirm it worked
 
 ---
 
@@ -152,27 +188,9 @@ MUST_CONTAIN_ONE_OF = []
 
 ## ⏸️ How to pause and re-enable the bot
 
-If you want to temporarily stop the bot from running every 30 minutes, you can pause it without deleting anything.
+To pause the bot, log into [cron-job.org](https://cron-job.org), find your cronjob, and toggle it off. To re-enable it, toggle it back on. That's it — no need to touch any files in GitHub.
 
-1. In your GitHub repo, click on `.github/workflows/vinted_checker.yml`
-2. Click the **pencil icon** ✏️ to edit it
-3. Find this line:
-
-```
-    - cron: "0,30 * * * *"
-```
-
-4. Add a `#` to the very start of it so it looks like this:
-
-```
-    # - cron: "0,30 * * * *"
-```
-
-5. Click **Commit changes**
-
-The bot will no longer run automatically. To re-enable it, just remove the `#` and commit again.
-
-Note: even when paused this way, you can still trigger a manual run anytime by going to **Actions > Used eBikes Listing Checker > Run workflow**.
+The manual **Run workflow** button in GitHub Actions will still work even when the cronjob is paused, so you can always trigger a one-off check whenever you like.
 
 ---
 
@@ -191,6 +209,11 @@ The next time the bot runs it will treat all listings as new and message you abo
 
 ## ❓ Troubleshooting
 
+**The bot isn't running every 15 minutes**
+- Log into cron-job.org and check your cronjob is enabled and not showing errors
+- Check that the URL, headers, and body in cron-job.org are entered exactly as shown in Step 7
+- Make sure the personal access token hasn't expired
+
 **I see "Telegram credentials not set. Skipping notification."**
 - Your GitHub secrets are either missing or named incorrectly
 - Go to Settings > Secrets and variables > Actions and check that both secrets exist and are named exactly `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
@@ -201,12 +224,8 @@ The next time the bot runs it will treat all listings as new and message you abo
 - Double-check your Chat ID is just the number, with no extra spaces
 
 **The bot ran but found nothing**
-- Your search might genuinely have no results right now — that's fine, it'll check again in 30 minutes
+- Your search might genuinely have no results right now — that's fine, it'll check again in 15 minutes
 - Your keywords might be filtering everything out — try setting both lists to `[]` temporarily and run it again to confirm listings are being found
-
-**GitHub Actions isn't running every 30 minutes**
-- GitHub can occasionally delay scheduled runs slightly — this is normal
-- If it's been more than an hour with no runs, go to Actions and trigger it manually to check for errors
 
 ---
 
