@@ -1,13 +1,13 @@
 # 🤖 usedebikes.ie Search Checker — Tutorial
 
-This guide will help you set up the bot from scratch and show you how to change the search when you want to look for something different. No coding experience needed!
+This guide will help you set up the bot from scratch and show you how to manage your searches. No coding experience needed!
 
 ---
 
 ## 📋 What you'll need
 
 - A free [GitHub](https://github.com) account
-- A free [cron-job.org](https://cron-job.org) account (this is what reliably triggers the bot every 15 minutes)
+- A free [cron-job.org](https://cron-job.org) account (this is what reliably triggers the bot)
 - A phone with [Telegram](https://telegram.org) installed (it's a free messaging app)
 
 ---
@@ -15,8 +15,6 @@ This guide will help you set up the bot from scratch and show you how to change 
 ## 🚀 Part 1: Setting it up for the first time
 
 ### Step 1 — Create your Telegram bot
-
-Telegram lets you create simple bots for free with no account beyond your normal Telegram login. Here's how:
 
 1. Open Telegram and search for **@BotFather** (it has a blue tick next to it)
 2. Tap on it and tap **Start**
@@ -31,13 +29,11 @@ Telegram lets you create simple bots for free with no account beyond your normal
 
 ### Step 2 — Get your Chat ID
 
-This tells the bot which conversation to send messages to (yours).
-
-1. In Telegram, search for the bot you just created by its username (e.g. `@myebikes_bot`) and tap **Start**
+1. In Telegram, search for the bot you just created by its username and tap **Start**
 2. Send it any message — just type `hi` and send it
 3. Open this URL in your browser, replacing `YOUR_BOT_TOKEN` with the token you copied:
    `https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates`
-4. You'll see some text on screen. Look for a number next to `"id":` inside the `"chat"` section. It'll look something like `"chat":{"id":987654321`
+4. Look for a number next to `"id":` inside the `"chat"` section, e.g. `"chat":{"id":987654321`
 5. **That number is your Chat ID — copy it**
 
 ---
@@ -46,186 +42,172 @@ This tells the bot which conversation to send messages to (yours).
 
 1. Go to [github.com](https://github.com) and log in, or create a free account
 2. Click the **+** button in the top-right corner and click **New repository**
-3. Give it a name like `ebikes-bot`
-4. Set it to **Private** so only you can see it
-5. Click **Create repository**
-6. Click **uploading an existing file** (or "Add file > Upload files")
-7. Upload all the files from this folder:
+3. Give it a name, set it to **Private**, and click **Create repository**
+4. Upload all the files:
    - `checker.py`
-   - `seen_ids.json`
-   - The file called `usedebikes_checker.yml` needs to go inside a specific folder in your repo. When uploading, GitHub lets you type a path into the filename box — name the file `.github/workflows/usedebikes_checker.yml` and GitHub will create the folders automatically
+   - `searches.json`
+   - `state.json`
+   - For `vinted_checker.yml`, type the path `.github/workflows/vinted_checker.yml` in the filename box when uploading — GitHub will create the folders automatically
 
 ---
 
 ### Step 4 — Add your secrets to GitHub
 
-GitHub has a secure vault for sensitive info like your bot token. The bot reads from this vault so your credentials are never visible in the code.
-
-1. In your GitHub repo, click **Settings** (the tab at the top)
-2. In the left menu, click **Secrets and variables**, then click **Actions**
-3. Click **New repository secret** and add each of the following two secrets:
+1. In your repo, click **Settings** > **Secrets and variables** > **Actions**
+2. Click **New repository secret** and add both of these:
 
 | Secret Name | What to put in it |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | The bot token from Step 1 |
 | `TELEGRAM_CHAT_ID` | The chat ID number from Step 2 |
 
-Make sure the secret names are spelled exactly as shown above — they are case-sensitive.
-
 ---
 
 ### Step 5 — Turn on GitHub Actions
 
-1. In your repo, click the **Actions** tab at the top
-2. If GitHub shows a message asking you to enable Actions, click the green button to enable them
+1. Click the **Actions** tab in your repo
+2. If prompted, click the green button to enable Actions
 
 ---
 
 ### Step 6 — Create a GitHub Personal Access Token
 
-This is what cron-job.org will use to trigger your workflow. It's like a special key that only has permission to run workflows — nothing else.
-
-1. Go to github.com and click your profile picture in the top-right corner, then click **Settings**
-2. Scroll all the way down the left menu and click **Developer settings**
-3. Click **Personal access tokens** > **Tokens (classic)**
-4. Click **Generate new token (classic)**
-5. Give it a name like `cron-job trigger`
-6. Set the expiry to whatever you like (No expiration means you never have to redo this)
-7. Tick the **workflow** checkbox
-8. Click **Generate token** and copy it — **you won't be able to see it again after leaving the page**
+1. On github.com, click your profile picture > **Settings**
+2. Scroll down and click **Developer settings** > **Personal access tokens** > **Tokens (classic)**
+3. Click **Generate new token (classic)**
+4. Give it a name like `cron-job trigger`, set any expiry, tick the **workflow** checkbox
+5. Click **Generate token** and copy it — **you won't see it again**
 
 ---
 
 ### Step 7 — Set up cron-job.org
 
-This is the service that reliably pings your bot every 15 minutes. GitHub's own built-in scheduler is unreliable and can skip hours at a time, so we use this instead.
-
 1. Go to [cron-job.org](https://cron-job.org) and create a free account
 2. Click **Create cronjob**
-3. Give it a title like `usedebikes checker`
-4. Set the URL to the following, replacing `YOUR_GITHUB_USERNAME` and `YOUR_REPO_NAME` with your own:
-   `https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions/workflows/usedebikes_checker.yml/dispatches`
-5. Set the schedule to **every 15 minutes**
-6. Expand the **Advanced** section and add the following under **Request headers**:
-   - Header: `Authorization` — Value: `Bearer YOUR_PERSONAL_ACCESS_TOKEN` (paste the token from Step 6)
-   - Header: `Accept` — Value: `application/vnd.github+json`
-7. Under **Request body**, set the type to **JSON** and paste in exactly: `{"ref":"main"}`
+3. Set the URL to (replacing `YOUR_GITHUB_USERNAME` and `YOUR_REPO_NAME`):
+   `https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions/workflows/vinted_checker.yml/dispatches`
+4. Set the request method to **POST**
+5. Set the schedule to every **2 minutes**
+6. Under **Advanced > Request headers**, add:
+   - `Authorization` → `Bearer YOUR_PERSONAL_ACCESS_TOKEN`
+   - `Accept` → `application/vnd.github+json`
+7. Under **Request body**, set type to **JSON** and paste: `{"ref":"main"}`
 8. Click **Save**
 
-The bot will now run every 15 minutes (plus a small random delay each time so it doesn't run like clockwork).
+---
 
-**Want to test it right now?**
-1. Go to your GitHub repo and click the **Actions** tab
-2. Click **usedebikes Checker** in the left list
-3. Click **Run workflow** > **Run workflow**
-4. After 30–60 seconds, click the run to see the output and confirm it worked
+## ✏️ Part 2: Managing your searches
+
+All your searches live in a single file called **`searches.json`**. This is the only file you need to edit when adding, changing, or removing a search.
+
+### What searches.json looks like
+
+```json
+[
+  {
+    "name": "Nike Pegasus Gore-Tex",
+    "url": "https://www.vinted.ie/catalog?search_text=...",
+    "must_contain": ["pegasus", "5"],
+    "must_contain_one_of": ["gore-tex", "goretex", "gtx"],
+    "interval_minutes": 2
+  },
+  {
+    "name": "Specialized eMTB",
+    "url": "https://www.vinted.ie/catalog?search_text=...",
+    "must_contain": ["specialized"],
+    "must_contain_one_of": ["emtb", "electric", "ebike"],
+    "interval_minutes": 30
+  }
+]
+```
+
+Each search has five fields:
+
+| Field | What it does |
+|---|---|
+| `name` | A label for the search — this appears in your Telegram alerts |
+| `url` | The full search URL copied from your browser |
+| `must_contain` | The title must include **all** of these words |
+| `must_contain_one_of` | The title must include **at least one** of these words |
+| `interval_minutes` | How often to check this search (in minutes) |
+
+For `must_contain` and `must_contain_one_of`: each word goes inside `"quote marks"` separated by commas. Set either to `[]` to skip that check entirely. Keywords are not case-sensitive.
 
 ---
 
-## ✏️ Part 2: Changing the search later
+### How to add a new search
 
-This is what you'll do when you want to search for something different.
-
-### How to change the search URL
-
-1. Go to [usedebikes.ie](https://www.usedebikes.ie) and do your search, applying all the filters you want (type, price, brand, etc.)
+1. Go to the site and set up your search with all the filters you want
 2. Copy the full URL from your browser's address bar
-3. Go to your GitHub repo and click on the file **`checker.py`**
-4. Click the **pencil icon** ✏️ in the top-right corner of the file to edit it
-5. Find this line near the top:
+3. Open **`searches.json`** in GitHub and click the pencil ✏️ to edit it
+4. Copy one of the existing search blocks and paste it after the last one, making sure to add a comma after the previous block. Like this:
 
+```json
+[
+  {
+    "name": "First Search",
+    ...
+  },
+  {
+    "name": "Second Search",
+    ...
+  }
+]
 ```
-VINTED_SEARCH_URL = "https://..."
-```
 
-6. Replace everything between the quote marks `"..."` with your new URL
-7. Scroll down and click **Commit changes**, then click **Commit changes** again in the popup
-
-Done! The bot will use the new search from its next run.
+5. Fill in the new search's `name`, `url`, keywords, and `interval_minutes`
+6. Click **Commit changes**
 
 ---
 
-### How to change the keywords
+### How to remove a search
 
-The bot has two keyword lists near the top of `checker.py`. A listing only triggers an alert if it passes **both** checks.
+1. Open **`searches.json`** and click the pencil ✏️
+2. Delete the entire block for that search (from the `{` to the closing `}`)
+3. Make sure there's no trailing comma after the last remaining search
+4. Click **Commit changes**
 
-**MUST_CONTAIN** — the title must include **all** of these words:
-```python
-MUST_CONTAIN = ["bosch", "250w"]
-```
+---
 
-**MUST_CONTAIN_ONE_OF** — the title must include **at least one** of these words:
-```python
-MUST_CONTAIN_ONE_OF = ["hardtail", "full suspension", "gravel"]
-```
+### How to reset a single search
 
-So with the settings above, a listing like "Bosch 250w Full Suspension eBike" would match, but "Shimano 250w Hardtail" would not (missing "bosch").
+The bot remembers seen listings in a file called `state.json`. To reset just one search (so it re-alerts you on existing listings):
 
-To edit them:
-1. Open **`checker.py`** in GitHub and click the pencil ✏️ to edit it
-2. Change the words inside the square brackets to whatever you want
-3. Each word goes inside `"quote marks"` and is separated by a comma
-4. Keywords are **not** case-sensitive — `"Bosch"` will also match "bosch" or "BOSCH"
-5. If you want to skip one of the checks entirely, set it to empty brackets: `[]`
+1. Open **`state.json`** and click the pencil ✏️
+2. Delete the entry for that search by name
+3. Click **Commit changes**
 
-**Examples:**
-
-Alert only when the title contains "trek" and one of "emtb" or "electric":
-```python
-MUST_CONTAIN = ["trek"]
-MUST_CONTAIN_ONE_OF = ["emtb", "electric"]
-```
-
-Alert for everything in the search with no keyword filter at all:
-```python
-MUST_CONTAIN = []
-MUST_CONTAIN_ONE_OF = []
-```
-
-6. Click **Commit changes** when done
+To reset everything, just replace the entire contents of `state.json` with `{}`
 
 ---
 
 ## ⏸️ How to pause and re-enable the bot
 
-To pause the bot, log into [cron-job.org](https://cron-job.org), find your cronjob, and toggle it off. To re-enable it, toggle it back on. That's it — no need to touch any files in GitHub.
-
-The manual **Run workflow** button in GitHub Actions will still work even when the cronjob is paused, so you can always trigger a one-off check whenever you like.
-
----
-
-## 🗑️ How to reset the bot
-
-The bot remembers which listings it has already told you about in a file called `seen_ids.json`. If you want it to start fresh — for example after changing your search — do this:
-
-1. Click on **`seen_ids.json`** in your repo
-2. Click the pencil ✏️ to edit it
-3. Delete everything and replace it with just: `[]`
-4. Click **Commit changes**
-
-The next time the bot runs it will treat all listings as new and message you about any matches.
+Log into [cron-job.org](https://cron-job.org) and toggle your cronjob off to pause, on to resume. The manual **Run workflow** button in GitHub Actions still works while paused.
 
 ---
 
 ## ❓ Troubleshooting
 
-**The bot isn't running every 15 minutes**
-- Log into cron-job.org and check your cronjob is enabled and not showing errors
-- Check that the URL, headers, and body in cron-job.org are entered exactly as shown in Step 7
-- Make sure the personal access token hasn't expired
+**The bot isn't running regularly**
+- Check cron-job.org for errors in the execution log
+- Make sure the URL, headers, and body are entered exactly as shown in Step 7
+- Check that your personal access token hasn't expired
 
-**I see "Telegram credentials not set. Skipping notification."**
-- Your GitHub secrets are either missing or named incorrectly
-- Go to Settings > Secrets and variables > Actions and check that both secrets exist and are named exactly `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
+**"Telegram credentials not set"**
+- Check Settings > Secrets and variables > Actions — both secrets must exist and be named exactly `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
 
-**I'm not getting any Telegram messages**
-- Make sure you sent your bot a message in Telegram first (Step 2) — it can't message you if you've never started a conversation with it
-- Go to **Actions** in GitHub and click the latest run — look for any red errors
-- Double-check your Chat ID is just the number, with no extra spaces
+**No Telegram messages arriving**
+- Make sure you sent the bot a message in Telegram first — it can't message you otherwise
+- Check the Actions log for errors
+- Double-check your Chat ID has no extra spaces
+
+**A search says "Not due yet" every run**
+- The `interval_minutes` for that search is set higher than how often the bot is triggered — that's fine, it just skips that search until enough time has passed
 
 **The bot ran but found nothing**
-- Your search might genuinely have no results right now — that's fine, it'll check again in 15 minutes
-- Your keywords might be filtering everything out — try setting both lists to `[]` temporarily and run it again to confirm listings are being found
+- The search might genuinely have no results right now
+- Your keywords might be too strict — try setting both to `[]` temporarily and run again to confirm listings are being fetched
 
 ---
 
