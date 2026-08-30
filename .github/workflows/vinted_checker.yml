@@ -2,9 +2,9 @@ name: usedebikes Checker
 
 on:
   # Scheduled runs via GitHub's own cron are disabled because they are unreliable.
-  # This workflow is triggered externally every 15 minutes by cron-job.org instead.
+  # This workflow is triggered externally every 2 minutes by cron-job.org instead.
   # schedule:
-  #   - cron: "0,15,30,45 * * * *"
+  #   - cron: "*/2 * * * *"
   workflow_dispatch:
     # Triggered by cron-job.org, and also allows manual runs from GitHub
 
@@ -13,14 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  # Needed so the bot can save seen_ids.json back to the repo
+      contents: write
 
     steps:
       - name: Random jitter delay
-        # Waits a random number of seconds (0–119) before doing anything.
-        # This means actual run times look like 14m13s or 16m58s apart rather
-        # than a perfectly regular 15 minutes.
-        run: sleep $((RANDOM % 12))
+        run: sleep $((RANDOM % 60))
 
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -41,10 +38,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python checker.py
 
-      - name: Save updated seen IDs back to the repo
+      - name: Save updated state back to the repo
         run: |
           git config user.name "listing-bot"
           git config user.email "listing-bot@users.noreply.github.com"
-          git add seen_ids.json
-          git diff --staged --quiet || git commit -m "Update seen listing IDs [skip ci]"
+          git add state.json
+          git diff --staged --quiet || git commit -m "Update state [skip ci]"
           git push
