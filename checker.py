@@ -84,13 +84,16 @@ def fetch_listings(api_url: str) -> list:
         return []
 
 
-def matches_keywords(title: str, must_contain: list, must_contain_one_of: list) -> bool:
+def matches_keywords(title: str, must_contain: list, must_contain_one_of: list, must_not_contain: list) -> bool:
     title_lower = title.lower()
     if must_contain:
         if not all(w.lower() in title_lower for w in must_contain):
             return False
     if must_contain_one_of:
         if not any(w.lower() in title_lower for w in must_contain_one_of):
+            return False
+    if must_not_contain:
+        if any(w.lower() in title_lower for w in must_not_contain):
             return False
     return True
 
@@ -138,6 +141,7 @@ def main():
         url = search["url"]
         must_contain = search.get("must_contain", [])
         must_contain_one_of = search.get("must_contain_one_of", [])
+        must_not_contain = search.get("must_not_contain", [])
         interval = search.get("interval_minutes", 15)
 
         print(f"--- {name} (every {interval} min) ---")
@@ -163,7 +167,7 @@ def main():
 
             seen_ids.add(item_id)
 
-            if matches_keywords(title, must_contain, must_contain_one_of):
+            if matches_keywords(title, must_contain, must_contain_one_of, must_not_contain):
                 print(f"  New match: {title}")
                 new_matches.append(item)
             else:
