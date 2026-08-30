@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Nike Pegasus Gore-Tex",
+    "url": "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex&price_from=0.0&price_to=100.0&currency=EUR&size_ids[]=790&brand_ids[]=53&order=newest_first",
+    "must_contain": ["pegasus", "5"],
+    "must_contain_one_of": ["gore-tex", "goretex", "gtx"],
+    "interval_minutes": 2
+  }
+]
