@@ -12,7 +12,7 @@
     "url": "https://www.vinted.ie/catalog?search_text=Retroid&price_from=80&price_to=180.00&currency=EUR&search_id=2560697324&order=newest_first&page=1&time=1788094549",
     "must_contain": ["Flip"],
     "must_contain_one_of": [],
-    "must_not_contain": [metroid],
+    "must_not_contain": ["metroid"],
     "interval_minutes": 2
   }
 ]
