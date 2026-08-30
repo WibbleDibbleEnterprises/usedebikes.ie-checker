@@ -1,27 +1,15 @@
 import requests
 import json
 import os
+from datetime import datetime, timezone
 
 # ============================================================
-#  SETTINGS — Edit these to change what the bot looks for
+#  All searches are configured in searches.json — edit that
+#  file to add, remove, or change searches. Do not edit here.
 # ============================================================
 
-# Paste your full Vinted search URL here
-VINTED_SEARCH_URL = "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex%20gtx%20gore-tex&price_from=0.00&currency=EUR&brand_ids[]=53&size_ids[]=790&search_id=2489317402&order=newest_first&page=1&time=1788092414&price_to=65"
-
-# MUST_CONTAIN — the listing title must include ALL of these words.
-# Leave empty [] to skip this check.
-MUST_CONTAIN = ["pegasus", "5"]
-
-# MUST_CONTAIN_ONE_OF — the listing title must include AT LEAST ONE of these words.
-# Leave empty [] to skip this check.
-MUST_CONTAIN_ONE_OF = ["gore-tex", "goretex", "gtx"]
-
-# ============================================================
-#  DO NOT EDIT BELOW THIS LINE (unless you know what you're doing!)
-# ============================================================
-
-SEEN_IDS_FILE = "seen_ids.json"
+SEARCHES_FILE = "searches.json"
+STATE_FILE = "state.json"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -31,25 +19,50 @@ HEADERS = {
 }
 
 
+def load_searches() -> list:
+    with open(SEARCHES_FILE, "r") as f:
+        return json.load(f)
+
+
+def load_state() -> dict:
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_state(state: dict):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+
+def is_due(search_name: str, interval_minutes: int, state: dict) -> bool:
+    """Check whether enough time has passed to run this search again."""
+    if search_name not in state:
+        return True
+    last_checked_str = state[search_name].get("last_checked")
+    if not last_checked_str:
+        return True
+    last_checked = datetime.fromisoformat(last_checked_str)
+    now = datetime.now(timezone.utc)
+    minutes_since = (now - last_checked).total_seconds() / 60
+    return minutes_since >= interval_minutes
+
+
 def build_api_url(catalog_url: str) -> str:
-    """Convert a Vinted catalog URL into the internal API URL."""
     from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
     parsed = urlparse(catalog_url)
     params = parse_qs(parsed.query, keep_blank_values=True)
-
     params.pop("search_id", None)
 
     flat_params = {}
     for key, val in params.items():
-        if len(val) == 1:
-            flat_params[key] = val[0]
-        else:
-            flat_params[key] = val
+        flat_params[key] = val[0] if len(val) == 1 else val
 
     flat_params["per_page"] = "96"
 
-    api_url = urlunparse((
+    return urlunparse((
         parsed.scheme,
         parsed.netloc,
         "/api/v2/catalog/items",
@@ -57,62 +70,37 @@ def build_api_url(catalog_url: str) -> str:
         urlencode(flat_params, doseq=True),
         ""
     ))
-    return api_url
 
 
 def fetch_listings(api_url: str) -> list:
-    """Fetch listings from Vinted's API."""
     try:
         session = requests.Session()
         session.get("https://www.vinted.ie", headers=HEADERS, timeout=15)
-
         response = session.get(api_url, headers=HEADERS, timeout=15)
         response.raise_for_status()
-        data = response.json()
-        return data.get("items", [])
+        return response.json().get("items", [])
     except Exception as e:
-        print(f"Error fetching listings: {e}")
+        print(f"  Error fetching listings: {e}")
         return []
 
 
-def load_seen_ids() -> set:
-    """Load the set of listing IDs we've already sent alerts for."""
-    if os.path.exists(SEEN_IDS_FILE):
-        with open(SEEN_IDS_FILE, "r") as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_seen_ids(seen_ids: set):
-    """Save the updated set of seen listing IDs."""
-    with open(SEEN_IDS_FILE, "w") as f:
-        json.dump(list(seen_ids), f)
-
-
-def matches_keywords(title: str) -> bool:
-    """Check if a listing title passes both keyword filters."""
+def matches_keywords(title: str, must_contain: list, must_contain_one_of: list) -> bool:
     title_lower = title.lower()
-
-    # Check that every word in MUST_CONTAIN appears in the title
-    if MUST_CONTAIN:
-        if not all(word.lower() in title_lower for word in MUST_CONTAIN):
+    if must_contain:
+        if not all(w.lower() in title_lower for w in must_contain):
             return False
-
-    # Check that at least one word in MUST_CONTAIN_ONE_OF appears in the title
-    if MUST_CONTAIN_ONE_OF:
-        if not any(word.lower() in title_lower for word in MUST_CONTAIN_ONE_OF):
+    if must_contain_one_of:
+        if not any(w.lower() in title_lower for w in must_contain_one_of):
             return False
-
     return True
 
 
-def send_telegram(new_listings: list):
-    """Send a Telegram message for each new matching listing."""
+def send_telegram(search_name: str, new_listings: list):
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
 
     if not bot_token or not chat_id:
-        print("Telegram credentials not set. Skipping notification.")
+        print("  Telegram credentials not set. Skipping notification.")
         return
 
     api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -124,57 +112,76 @@ def send_telegram(new_listings: list):
         url = f"https://www.vinted.ie/items/{item.get('id', '')}"
 
         message = (
-            f"New Vinted listing found!\n\n"
+            f"[{search_name}]\n\n"
             f"{title}\n"
             f"{price_str}\n\n"
             f"{url}"
         )
 
         try:
-            response = requests.post(api_url, data={
-                "chat_id": chat_id,
-                "text": message,
-            }, timeout=10)
+            response = requests.post(api_url, data={"chat_id": chat_id, "text": message}, timeout=10)
             response.raise_for_status()
-            print(f"Telegram message sent for: {title}")
+            print(f"  Telegram sent: {title}")
         except Exception as e:
-            print(f"Failed to send Telegram message: {e}")
+            print(f"  Failed to send Telegram message: {e}")
 
 
 def main():
-    print("Vinted bot starting...")
+    searches = load_searches()
+    state = load_state()
+    now_str = datetime.now(timezone.utc).isoformat()
 
-    api_url = build_api_url(VINTED_SEARCH_URL)
-    print(f"Fetching: {api_url}")
+    print(f"Loaded {len(searches)} search(es).\n")
 
-    listings = fetch_listings(api_url)
-    print(f"Found {len(listings)} listings in search results.")
+    for search in searches:
+        name = search["name"]
+        url = search["url"]
+        must_contain = search.get("must_contain", [])
+        must_contain_one_of = search.get("must_contain_one_of", [])
+        interval = search.get("interval_minutes", 15)
 
-    seen_ids = load_seen_ids()
-    new_matches = []
+        print(f"--- {name} (every {interval} min) ---")
 
-    for item in listings:
-        item_id = str(item.get("id", ""))
-        title = item.get("title", "")
-
-        if item_id in seen_ids:
+        if not is_due(name, interval, state):
+            print(f"  Not due yet, skipping.\n")
             continue
 
-        seen_ids.add(item_id)
+        api_url = build_api_url(url)
+        listings = fetch_listings(api_url)
+        print(f"  Found {len(listings)} listings in search results.")
 
-        if matches_keywords(title):
-            print(f"  New match: {title}")
-            new_matches.append(item)
+        search_state = state.get(name, {"seen_ids": [], "last_checked": None})
+        seen_ids = set(search_state.get("seen_ids", []))
+        new_matches = []
+
+        for item in listings:
+            item_id = str(item.get("id", ""))
+            title = item.get("title", "")
+
+            if item_id in seen_ids:
+                continue
+
+            seen_ids.add(item_id)
+
+            if matches_keywords(title, must_contain, must_contain_one_of):
+                print(f"  New match: {title}")
+                new_matches.append(item)
+            else:
+                print(f"  Skipped (no keyword match): {title}")
+
+        if new_matches:
+            send_telegram(name, new_matches)
         else:
-            print(f"  Skipped (no keyword match): {title}")
+            print("  No new matches found.")
 
-    if new_matches:
-        send_telegram(new_matches)
-    else:
-        print("No new matches found this run.")
+        state[name] = {
+            "seen_ids": list(seen_ids),
+            "last_checked": now_str
+        }
+        print()
 
-    save_seen_ids(seen_ids)
-    print("Done!")
+    save_state(state)
+    print("All done!")
 
 
 if __name__ == "__main__":
