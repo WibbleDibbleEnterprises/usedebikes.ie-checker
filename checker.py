@@ -7,7 +7,7 @@ import os
 # ============================================================
 
 # Paste your full Vinted search URL here
-VINTED_SEARCH_URL = "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex&price_from=0.0&price_to=100.0&currency=EUR&size_ids[]=790&brand_ids[]=53&order=newest_first"
+VINTED_SEARCH_URL = "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex%20gtx%20gore-tex&price_from=0.00&currency=EUR&brand_ids[]=53&size_ids[]=790&search_id=2489317402&order=newest_first&page=1&time=1788092414&price_to=65"
 
 # MUST_CONTAIN — the listing title must include ALL of these words.
 # Leave empty [] to skip this check.
