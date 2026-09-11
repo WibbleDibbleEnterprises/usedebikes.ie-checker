@@ -54,7 +54,10 @@ def build_api_url(catalog_url: str) -> str:
 
     parsed = urlparse(catalog_url)
     params = parse_qs(parsed.query, keep_blank_values=True)
-    params.pop("search_id", None)
+    # Strip session-specific parameters Vinted bakes into copied URLs.
+    # These can cause the API to filter out older listings, so we always remove them.
+    for key in ("search_id", "time", "page"):
+        params.pop(key, None)
 
     flat_params = {}
     for key, val in params.items():
