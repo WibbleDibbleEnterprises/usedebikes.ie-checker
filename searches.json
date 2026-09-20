@@ -1,18 +1,10 @@
 [
   {
     "name": "Nike Pegasus Gore-Tex",
-    "url": "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex%20gtx%20gore-tex&price_from=0.00&currency=EUR&brand_ids[]=53&size_ids[]=790&search_id=2489317402&order=newest_first&page=1&time=1788092414&price_to=65",
+    "url": "https://www.vinted.ie/catalog?search_text=Nike%20pegasus%20gore%20tex%20gtx%20gore-tex&price_from=0.00&currency=EUR&brand_ids[]=53&size_ids[]=790&search_id=2489317402&order=newest_first&page=1&time=1788092414&price_to=80",
     "must_contain": ["pegasus", "5"],
     "must_contain_one_of": ["gore-tex", "goretex", "gtx"],
     "must_not_contain": [],
-    "interval_minutes": 2
-  },
-    {
-    "name": "Retroid",
-    "url": "https://www.vinted.ie/catalog?search_text=Retroid&price_from=80&price_to=180.00&currency=EUR&search_id=2560697324&order=newest_first&page=1&time=1788094549",
-    "must_contain": ["Flip"],
-    "must_contain_one_of": [],
-    "must_not_contain": ["metroid"],
     "interval_minutes": 2
   }
 ]
